@@ -371,25 +371,6 @@ bool internalBoxPointWithinVolume(float3 p, internalBoxQuad q) {
     return all(abs(dotAxes) < 0.5);
 }
 
-bool internalBoxPointWithinVolumeold1(float3 p, internalBoxQuad q) {
-    float3 relvec = q.a - p;
-    float3 planeNormal = q.planeNormalZComp.xyz;
-    float3 uline = q.ulineAndLength.xyz;
-    float3 vline = q.vlineAndLength.xyz;
-    float3 dotAxes = float3(
-        dot(relvec, uline),
-        dot(relvec, vline),
-        dot(relvec, planeNormal)
-    );
-    float3 compareLengths = float3(
-        q.ulineAndLength.w,
-        q.vlineAndLength.w,
-        q.planeNormalZComp.w
-    );
-    return (//all(dotAxes >= 0) &&
-        all(dotAxes * compareLengths <= 1));
-}
-
 bool internalBoxTriangleIntersectsQuad(float3 p1, float3 p2, float3 p3, internalBoxQuad q) {
     float3 x1;
     float2 x2;
@@ -526,26 +507,19 @@ bool boxConditionCheck(float3 origvertpos) {
         }
     });
     BOXCLIP_FOR_EACH_QUAD(ShowVolume, {
-        if (1){//q.planeNormalZComp.w < 0) {
-            if (internalBoxPointWithinVolume(origvertpos.xyz, q)) {
-                found = true;
-            }
+        if (internalBoxPointWithinVolume(origvertpos.xyz, q)) {
+            found = true;
         }
     });
     BOXCLIP_FOR_EACH_QUAD(HideVolume, {
-        if (1){//if (q.planeNormalZComp.w < 0) {
-            if (internalBoxPointWithinVolume(origvertpos.xyz, q)) {
-                found = false;
-            }
+        if (internalBoxPointWithinVolume(origvertpos.xyz, q)) {
+            found = false;
         }
     });
     BOXCLIP_FOR_EACH_QUAD(ClipShow, {
         if (internalBoxPointInQuad(origvertpos.xyz, q, thispos, thisuv)) {
             found = true;
         }
-        // if (internalBoxFrustumCheck(origvertpos.xyz, q, -3)) {
-        //     found = true;
-        // }
     });
     BOXCLIP_FOR_EACH_QUAD(ClipHide, {
         if (internalBoxPointInQuad(origvertpos.xyz, q, thispos, thisuv)) {
@@ -571,6 +545,54 @@ void boxConditionalClipWorld(float4 worldPos) {
     clip(boxConditionCheck(mul(unity_WorldToObject, worldPos).xyz) ? 0 : -1);
 }
 
+bool geometry_check(float3 v1, float3 v2, float3 v3) {
+    float3 thispos = 0;
+    float2 thisuv = 0;
+    bool found = true;
+    BOXCLIP_FOR_EACH_QUAD(ShowVolume, {
+        found = false;
+    });
+    BOXCLIP_FOR_EACH_QUAD(ShowCameraWithin, {
+        found = false;
+    });
+    BOXCLIP_FOR_EACH_QUAD(ClipShow, {
+        found = false;
+    });
+    BOXCLIP_FOR_EACH_QUAD(ShowCameraWithin, {
+        if (internalBoxPointWithinVolume(boxObjectSpaceCameraPosStereo, q)) {
+            found = true;
+        }
+    });
+    BOXCLIP_FOR_EACH_QUAD(HideCameraWithin, {
+        if (internalBoxPointWithinVolume(boxObjectSpaceCameraPosStereo, q)) {
+            found = false;
+        }
+    });
+    BOXCLIP_FOR_EACH_QUAD(ShowVolume, {
+        if (internalBoxPointWithinVolume(v1.xyz, q) || internalBoxPointWithinVolume(v2.xyz, q) || internalBoxPointWithinVolume(v3.xyz, q)) {
+            found = true;
+        }
+    });
+    BOXCLIP_FOR_EACH_QUAD(HideVolume, {
+        if (internalBoxPointWithinVolume(v1.xyz, q) && internalBoxPointWithinVolume(v2.xyz, q) && internalBoxPointWithinVolume(v3.xyz, q)) {
+            found = false;
+        }
+    });
+    BOXCLIP_FOR_EACH_QUAD(ClipShow, {
+        if (internalBoxTriangleIntersectsQuad(v1.xyz, v2.xyz, v3.xyz, q)) {
+            found = true;
+        }
+    });
+    BOXCLIP_FOR_EACH_QUAD(ClipHide, {
+        if (internalBoxPointInQuad(v1.xyz, q, thispos, thisuv) &&
+                internalBoxPointInQuad(v2.xyz, q, thispos, thisuv) &&
+                internalBoxPointInQuad(v3.xyz, q, thispos, thisuv)) {
+            found = true;
+        }
+    });
+    return found;
+}
+
 bool modified_vert_check(float3 localPos, float length) {
     bool found = true;
     BOXCLIP_FOR_EACH_QUAD(ShowVolume, {
@@ -593,17 +615,13 @@ bool modified_vert_check(float3 localPos, float length) {
         }
     });
     BOXCLIP_FOR_EACH_QUAD(ShowVolume, {
-        if (q.planeNormalZComp.w < 0) {
-            if (internalBoxPointWithinVolume(localPos, q)) {
-                found = true;
-            }
+        if (internalBoxPointWithinVolume(localPos, q)) {
+            found = true;
         }
     });
     BOXCLIP_FOR_EACH_QUAD(HideVolume, {
-        if (q.planeNormalZComp.w < 0) {
-            if (internalBoxPointWithinVolume(localPos, q)) {
-                found = false;
-            }
+        if (internalBoxPointWithinVolume(localPos, q)) {
+            found = false;
         }
     });
     BOXCLIP_FOR_EACH_QUAD(ClipShow, {
@@ -641,15 +659,18 @@ bool modified_vert_check(float3 localPos, float length) {
         float lengthVert0 = max(distance(localPos[0], localPos[1]),distance(localPos[0], localPos[2])); \
         float lengthVert1 = max(distance(localPos[0], localPos[1]),distance(localPos[1], localPos[2])); \
         float lengthVert2 = max(distance(localPos[0], localPos[2]),distance(localPos[1], localPos[2])); \
-        /* if (geometry_check(localPos[0], localPos[1], localPos[2])) { */ \
-        if ((modified_vert_check(localPos[0], lengthVert0) && \
-            modified_vert_check(localPos[1], lengthVert1) && \
-            modified_vert_check(localPos[2], lengthVert2))) { \
+        if (geometry_check(localPos[0], localPos[1], localPos[2])) { \
             tristream.Append(IN[0]); \
             tristream.Append(IN[1]); \
             tristream.Append(IN[2]); \
         } \
     }
+
+/*
+        if ((modified_vert_check(localPos[0], lengthVert0) && \
+            modified_vert_check(localPos[1], lengthVert1) && \
+            modified_vert_check(localPos[2], lengthVert2))) {
+*/
 
 #define BOXCLIP_GEOM_SHADER_WORLDPOS(V2FStruct, worldPosVar) \
     BOXCLIP_GEOM_SHADER_LOCALPOS(V2FStruct, mul(unity_WorldToObject, float4((worldPosVar).xyz, 1)).xyz)
