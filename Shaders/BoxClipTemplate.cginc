@@ -587,7 +587,7 @@ bool geometry_check(float3 v1, float3 v2, float3 v3) {
         if (internalBoxPointInQuad(v1.xyz, q, thispos, thisuv) &&
                 internalBoxPointInQuad(v2.xyz, q, thispos, thisuv) &&
                 internalBoxPointInQuad(v3.xyz, q, thispos, thisuv)) {
-            found = true;
+            found = false;
         }
     });
     return found;

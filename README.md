@@ -32,6 +32,9 @@ Tried it? Having trouble? Please say hello to Lyuma#0781 or xnlyuma@gmail.com - 
 
 ## Update notes
 
+### v0.3.1 and v0.3.2:
+- Performance fixes related to geometry culling.
+
 ### v0.3:
 - Added ShowVolume and HideVolume to reveal and hide what is contained in a 3d Volume.
 - Added ShowCameraWithin and HideCameraWithin to reveal the object.
