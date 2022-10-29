@@ -23,7 +23,7 @@ using System.Collections.Generic;
 
 [CustomEditor(typeof(BoxClipOrigin))]
 // [CanEditMultipleObjects]
-public class BoxClipOriginditor : Editor
+public class BoxClipOriginEditor : Editor
 {
     SerializedProperty managedMaterials;
     SerializedProperty knownBuiltinMaterials;
@@ -546,8 +546,13 @@ public class BoxClipOriginditor : Editor
         return targetPos;
     }
 
+    static System.Globalization.NumberFormatInfo nfi = new System.Globalization.NumberFormatInfo();
+    static BoxClipOriginEditor() {
+        nfi.NumberDecimalSeparator = ".";
+    }
+
     string printFloat(float f) {
-        return (float.IsInfinity(f) || float.IsNaN(f)) ? "0" : f.ToString();
+        return (float.IsInfinity(f) || float.IsNaN(f)) ? "0" : f.ToString(nfi);
     }
     string printFloat3(Vector4 data) {
         return "float3(" + printFloat(data.x) + "," + printFloat(data.y) + "," + printFloat(data.z) + ")";
@@ -588,9 +593,9 @@ public class BoxClipOriginditor : Editor
         string outSource = shaderSource.Substring(0, firstQuote) + "\"" + "Hidden/BoxClipBaked/" + AssetDatabase.AssetPathToGUID(generatedDir.stringValue) + "Inst/" + orig.name.Substring(8) + "\" {\n";
         outSource += "CGINCLUDE\n" +
         "    #define BOXCLIP_CONFIGURED 1\n" +
-        "    #define BOXCLIP_SCALE " + scale.floatValue + "\n" +
-        "    #define BOXCLIP_ALLOW_IN_FRONT " + allowInFront.floatValue + "\n" +
-        "    #define BOXCLIP_ALLOW_IN_FRONT " + allowInFront.floatValue + "\n\n";
+        "    #define BOXCLIP_SCALE " + printFloat(scale.floatValue) + "\n" +
+        "    #define BOXCLIP_ALLOW_IN_FRONT " + printFloat(allowInFront.floatValue) + "\n" +
+        "    #define BOXCLIP_ALLOW_IN_FRONT " + printFloat(allowInFront.floatValue) + "\n\n";
         outSource += generateBoxQuadsMacro(boxClipObj, "ClipShow", BoxClipOrigin.BoxClipArray.ClipShow);
         outSource += generateBoxQuadsMacro(boxClipObj, "ClipHide", BoxClipOrigin.BoxClipArray.ClipHide);
         outSource += generateBoxQuadsMacro(boxClipObj, "ShowVolume", BoxClipOrigin.BoxClipArray.ShowVolume);
